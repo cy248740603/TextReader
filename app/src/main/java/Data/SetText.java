@@ -52,26 +52,37 @@ public class SetText implements Runnable{
         String txtFilePath = Environment.getExternalStorageDirectory() + "/TextReader/《残袍》.txt";
         int index = txtFilePath.lastIndexOf(File.separator);
         String name = txtFilePath.substring(index + 1,txtFilePath.length());
-        activity.setTitle(name);
+        activity.setTitle(name);int num = 0;
         try{
             FileInputStream fr = new FileInputStream(txtFilePath);
             BufferedReader br = new BufferedReader(new InputStreamReader(fr,"GB2312"));
             String line;//记录每一行数据
-            int num = 0;
             StringBuffer content = new StringBuffer() ;
             while((line = br.readLine()) != null){//如果还有下一行数据
                 if (line.length() == 0)
                     content.append("\t\t\t\t");
                 else {
-                    int tmp = (line.length() + 1)/ maxLineTextNum + num + 1;
+                    int tmp = (line.length() + 1)/ maxLineTextNum;
+                    if ((line.length() + 1) % maxLineTextNum == 0)
+                        tmp += num;
+                    else
+                        tmp += num + 1;
                     if (tmp > maxLineCountNum){
                         int addLength = (maxLineCountNum - num) * maxLineTextNum;
+                        int addPage = tmp/maxLineCountNum;
                         content.append(line.substring(0,addLength - 1));
                         txtBuffer.add(content.toString());
                         content.setLength(0);//清空buffer
                         mHandler.sendEmptyMessage(page++);
-                        content.append(line.substring((addLength),line.length()) + "\n");
-                        num = tmp - maxLineCountNum;
+                        num = tmp % maxLineCountNum;
+                        if (num == 0)
+                            addPage --;
+                        for (int i = 0;i < (addPage - 1); i++) {
+                            txtBuffer.add(line.substring((addLength) + i * maxLineTextNum * maxLineCountNum,
+                                    (addLength) + (i + 1) * maxLineTextNum * maxLineCountNum ));
+                            mHandler.sendEmptyMessage(page++);
+                        }
+                        content.append(line.substring((addLength) + (addPage - 1) * maxLineTextNum * maxLineCountNum, line.length()) + "\n");
                     }else if (tmp == maxLineCountNum){
                         content.append(line + "\n");
                         txtBuffer.add(content.toString());
@@ -84,10 +95,13 @@ public class SetText implements Runnable{
                     }
                 }
             }
+            txtBuffer.add(content.toString());
+            mHandler.sendEmptyMessage(page++);
             br.close();//关闭文件输出流
             fr.close();//关闭缓冲区
         }catch (Exception e){
             e.printStackTrace();
+            Log.e("Exception",(maxLineCountNum - num) * maxLineTextNum +"");
         }
     }
 
